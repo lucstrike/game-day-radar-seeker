@@ -1,289 +1,368 @@
 
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Filter, Search, Clock, Star } from 'lucide-react';
-import { NewsArticle, SportType } from '../../types/sports';
-import NewsCard from './NewsCard';
+import { Newspaper, Filter, Search, TrendingUp, Clock, User, ExternalLink, Bookmark, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useSportsDataStore } from '../../store/sportsDataStore';
 import { useUserStore } from '../../store/userStore';
+import LoadingSpinner from '../common/LoadingSpinner';
+import { useToast } from '@/hooks/use-toast';
 
 const NewsScreen = () => {
-  const { profile } = useUserStore();
-  const [news, setNews] = useState<NewsArticle[]>([]);
-  const [filteredNews, setFilteredNews] = useState<NewsArticle[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedSport, setSelectedSport] = useState<SportType | 'all'>('all');
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Mock news data
-  const mockNews: NewsArticle[] = [
-    {
-      id: '1',
-      title: 'Palmeiras anuncia contratação de novo técnico para temporada 2024',
-      summary: 'Verdão confirma chegada do comandante português que estava no futebol europeu. Apresentação deve acontecer na próxima semana.',
-      content: 'O Palmeiras oficializou hoje a contratação do novo técnico...',
-      author: 'João Santos',
-      publishedAt: '2024-06-10T08:30:00Z',
-      imageUrl: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800&h=400&fit=crop',
-      tags: ['Contratação', 'Palmeiras', 'Técnico'],
-      sport: 'soccer',
-      teams: [{
-        id: 'palm',
-        name: 'Palmeiras',
-        logo: 'https://logoeps.com/wp-content/uploads/2013/03/palmeiras-vector-logo.png',
-        sport: 'soccer',
-        league: 'Brasileirão',
-        country: 'Brasil'
-      }],
-      source: 'Globo Esporte',
-      url: 'https://globoesporte.globo.com'
-    },
-    {
-      id: '2',
-      title: 'NBA: Lakers vencem Warriors em jogo emocionante nos playoffs',
-      summary: 'Em partida decidida nos últimos segundos, Lakers conseguem virada histórica contra os Warriors e avançam na pós-temporada.',
-      content: 'Os Los Angeles Lakers conseguiram uma vitória...',
-      author: 'Maria Silva',
-      publishedAt: '2024-06-09T23:45:00Z',
-      imageUrl: 'https://images.unsplash.com/photo-1574623452334-1e0ac2b3ccb4?w=800&h=400&fit=crop',
-      tags: ['NBA', 'Playoffs', 'Lakers', 'Warriors'],
-      sport: 'basketball',
-      teams: [
-        {
-          id: 'lakers',
-          name: 'LA Lakers',
-          logo: 'https://logoeps.com/wp-content/uploads/2013/03/los-angeles-lakers-vector-logo.png',
-          sport: 'basketball',
-          league: 'NBA',
-          country: 'EUA'
-        },
-        {
-          id: 'warriors',
-          name: 'Golden State Warriors',
-          logo: 'https://logoeps.com/wp-content/uploads/2013/03/golden-state-warriors-vector-logo.png',
-          sport: 'basketball',
-          league: 'NBA',
-          country: 'EUA'
-        }
-      ],
-      source: 'ESPN',
-      url: 'https://espn.com.br'
-    },
-    {
-      id: '3',
-      title: 'Seleção Brasileira de Vôlei conquista medalha de ouro em torneio internacional',
-      summary: 'Brasil vence final contra a Itália e mostra força para os próximos compromissos internacionais.',
-      content: 'A Seleção Brasileira de Vôlei masculino...',
-      author: 'Carlos Oliveira',
-      publishedAt: '2024-06-09T16:20:00Z',
-      imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=400&fit=crop',
-      tags: ['Seleção', 'Vôlei', 'Ouro', 'Internacional'],
-      sport: 'volleyball',
-      teams: [],
-      source: 'CBV',
-      url: 'https://cbv.com.br'
-    },
-    {
-      id: '4',
-      title: 'Wimbledon 2024: Brasileiros avançam para as oitavas de final',
-      summary: 'Três tenistas brasileiros conseguem classificação histórica para as oitavas em Wimbledon.',
-      content: 'O tênis brasileiro vive momento especial...',
-      author: 'Ana Costa',
-      publishedAt: '2024-06-08T14:15:00Z',
-      imageUrl: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&h=400&fit=crop',
-      tags: ['Wimbledon', 'Brasil', 'Tênis'],
-      sport: 'tennis',
-      teams: [],
-      source: 'UOL Esporte',
-      url: 'https://esporte.uol.com.br'
-    },
-    {
-      id: '5',
-      title: 'NFL: Draft 2024 traz surpresas e novos talentos para a liga',
-      summary: 'Jovens quarterbacks chamam atenção e podem revolucionar a nova temporada da NFL.',
-      content: 'O Draft da NFL 2024 foi marcado...',
-      author: 'Pedro Lima',
-      publishedAt: '2024-06-07T20:00:00Z',
-      imageUrl: 'https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=800&h=400&fit=crop',
-      tags: ['NFL', 'Draft', 'Novatos'],
-      sport: 'football',
-      teams: [],
-      source: 'ESPN',
-      url: 'https://espn.com.br'
-    }
-  ];
+  const [selectedSport, setSelectedSport] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [activeTab, setActiveTab] = useState('trending');
+  const [bookmarkedNews, setBookmarkedNews] = useState<string[]>([]);
+  
+  const { profile } = useUserStore();
+  const { 
+    news, 
+    isLoadingNews,
+    fetchNews,
+    refreshAllData
+  } = useSportsDataStore();
 
   useEffect(() => {
-    const loadNews = async () => {
-      setIsLoading(true);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setNews(mockNews);
-      setFilteredNews(mockNews);
-      setIsLoading(false);
-    };
-
-    loadNews();
+    refreshAllData();
+    // Carregar bookmarks salvos
+    const saved = localStorage.getItem('bookmarkedNews');
+    if (saved) {
+      setBookmarkedNews(JSON.parse(saved));
+    }
   }, []);
 
-  useEffect(() => {
-    let filtered = news;
-
-    // Filter by sport
-    if (selectedSport !== 'all') {
-      filtered = filtered.filter(article => article.sport === selectedSport);
-    }
-
-    // Filter by search query
-    if (searchQuery) {
-      filtered = filtered.filter(article =>
+  const filterNews = (articles: any[]) => {
+    return articles.filter(article => {
+      const matchesSearch = searchQuery === '' || 
         article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         article.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    }
+        article.source.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesSport = selectedSport === 'all' || article.sport === selectedSport;
+      const matchesCategory = selectedCategory === 'all' || article.category === selectedCategory;
+      
+      return matchesSearch && matchesSport && matchesCategory;
+    });
+  };
 
-    // Prioritize favorite teams if user is logged in
-    if (profile?.favoriteTeams.length) {
-      const favoriteTeamIds = profile.favoriteTeams.map(team => team.id);
-      filtered.sort((a, b) => {
-        const aHasFavorite = a.teams.some(team => favoriteTeamIds.includes(team.id));
-        const bHasFavorite = b.teams.some(team => favoriteTeamIds.includes(team.id));
-        
-        if (aHasFavorite && !bHasFavorite) return -1;
-        if (!aHasFavorite && bHasFavorite) return 1;
-        return 0;
+  const getNewsWithBookmarks = () => {
+    return filterNews(news).map(article => ({
+      ...article,
+      isBookmarked: bookmarkedNews.includes(article.id)
+    }));
+  };
+
+  const getTrendingNews = () => {
+    return getNewsWithBookmarks()
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .slice(0, 10);
+  };
+
+  const getRecentNews = () => {
+    return getNewsWithBookmarks()
+      .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+  };
+
+  const getBookmarkedNews = () => {
+    return getNewsWithBookmarks().filter(article => article.isBookmarked);
+  };
+
+  const handleBookmark = (articleId: string) => {
+    const newBookmarks = bookmarkedNews.includes(articleId)
+      ? bookmarkedNews.filter(id => id !== articleId)
+      : [...bookmarkedNews, articleId];
+    
+    setBookmarkedNews(newBookmarks);
+    localStorage.setItem('bookmarkedNews', JSON.stringify(newBookmarks));
+    
+    toast({
+      title: bookmarkedNews.includes(articleId) ? "Removido dos favoritos" : "Adicionado aos favoritos",
+      description: "Artigo atualizado na sua lista de favoritos.",
+    });
+  };
+
+  const handleShare = (article: any) => {
+    if (navigator.share) {
+      navigator.share({
+        title: article.title,
+        text: article.summary,
+        url: article.url || window.location.href,
+      });
+    } else {
+      navigator.clipboard.writeText(article.url || window.location.href);
+      toast({
+        title: "Link copiado!",
+        description: "O link do artigo foi copiado para a área de transferência.",
       });
     }
+  };
 
-    setFilteredNews(filtered);
-  }, [selectedSport, searchQuery, news, profile]);
+  const handleReadMore = (article: any) => {
+    if (article.url) {
+      window.open(article.url, '_blank');
+    }
+  };
 
-  const sports = [
-    { id: 'all' as const, name: 'Todos', count: news.length },
-    { id: 'soccer' as const, name: 'Futebol', count: news.filter(n => n.sport === 'soccer').length },
-    { id: 'basketball' as const, name: 'Basquete', count: news.filter(n => n.sport === 'basketball').length },
-    { id: 'volleyball' as const, name: 'Vôlei', count: news.filter(n => n.sport === 'volleyball').length },
-    { id: 'tennis' as const, name: 'Tênis', count: news.filter(n => n.sport === 'tennis').length },
-    { id: 'football' as const, name: 'NFL', count: news.filter(n => n.sport === 'football').length },
-  ];
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    
+    if (hours < 1) return 'Há alguns minutos';
+    if (hours < 24) return `Há ${hours}h`;
+    return date.toLocaleDateString('pt-BR');
+  };
 
-  const featuredNews = filteredNews[0];
-  const regularNews = filteredNews.slice(1);
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-64 bg-muted rounded-2xl"></div>
-        <div className="grid gap-4 md:grid-cols-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-48 bg-muted rounded-lg"></div>
-          ))}
+  const NewsCard = ({ article }: { article: any }) => (
+    <Card className="hover:shadow-lg transition-all duration-200 group">
+      <CardContent className="p-0">
+        <div className="flex flex-col md:flex-row">
+          <div className="md:w-1/3 relative">
+            <img
+              src={article.imageUrl}
+              alt={article.title}
+              className="w-full h-48 md:h-full object-cover rounded-l-lg"
+            />
+            <div className="absolute top-2 left-2">
+              <Badge variant="secondary" className="bg-black/70 text-white">
+                {article.sport}
+              </Badge>
+            </div>
+          </div>
+          
+          <div className="md:w-2/3 p-6 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  <span>{article.source}</span>
+                  <Clock className="h-4 w-4 ml-2" />
+                  <span>{formatDate(article.publishedAt)}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleBookmark(article.id)}
+                    className={article.isBookmarked ? "text-yellow-500" : ""}
+                  >
+                    <Bookmark className={`h-4 w-4 ${article.isBookmarked ? 'fill-current' : ''}`} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleShare(article)}
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              <h3 className="text-lg font-semibold line-clamp-2 group-hover:text-primary transition-colors">
+                {article.title}
+              </h3>
+              
+              <p className="text-muted-foreground line-clamp-3">
+                {article.summary}
+              </p>
+              
+              {article.tags && (
+                <div className="flex flex-wrap gap-2">
+                  {article.tags.slice(0, 3).map((tag: string) => (
+                    <Badge key={tag} variant="outline" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                {article.views && (
+                  <div className="flex items-center space-x-1">
+                    <TrendingUp className="h-4 w-4" />
+                    <span>{article.views.toLocaleString()} visualizações</span>
+                  </div>
+                )}
+              </div>
+              
+              <Button 
+                size="sm" 
+                onClick={() => handleReadMore(article)}
+                className="group-hover:bg-primary group-hover:text-primary-foreground"
+              >
+                Ler mais
+                <ExternalLink className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </div>
         </div>
+      </CardContent>
+    </Card>
+  );
+
+  if (isLoadingNews) {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <LoadingSpinner size="lg" text="Carregando notícias..." />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-20 md:pb-8">
+    <div className="space-y-6">
       {/* Header */}
-      <section className="animate-fade-in">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold gradient-text">Notícias Esportivas</h1>
-            <p className="text-muted-foreground mt-1">
-              Fique por dentro das últimas notícias do mundo dos esportes
-            </p>
-          </div>
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filtros
-          </Button>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center space-x-2">
+            <Newspaper className="h-8 w-8 text-primary" />
+            <span>Notícias</span>
+          </h1>
+          <p className="text-muted-foreground">
+            Fique por dentro das últimas notícias do mundo esportivo
+          </p>
         </div>
-
-        {/* Search */}
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Buscar notícias..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 rounded-lg border bg-background transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
-
-        {/* Sport Filters */}
-        <div className="flex space-x-2 overflow-x-auto pb-2">
-          {sports.map((sport) => (
-            <Button
-              key={sport.id}
-              variant={selectedSport === sport.id ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedSport(sport.id)}
-              className="whitespace-nowrap"
-            >
-              {sport.name}
-              <Badge variant="secondary" className="ml-2 text-xs">
-                {sport.count}
-              </Badge>
-            </Button>
-          ))}
-        </div>
-      </section>
-
-      {/* Featured News */}
-      {featuredNews && (
-        <section className="animate-slide-up">
-          <div className="flex items-center space-x-2 mb-4">
-            <TrendingUp className="h-5 w-5 text-primary animate-pulse" />
-            <h2 className="text-xl font-bold">Destaque</h2>
-          </div>
-          <NewsCard article={featuredNews} variant="featured" />
-        </section>
-      )}
-
-      {/* Personalized Recommendations */}
-      {profile?.favoriteTeams.length > 0 && (
-        <section className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
-          <div className="flex items-center space-x-2 mb-4">
-            <Star className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold">Para Você</h2>
-          </div>
-          <div className="grid gap-4">
-            {filteredNews
-              .filter(article => 
-                article.teams.some(team => 
-                  profile.favoriteTeams.some(favTeam => favTeam.id === team.id)
-                )
-              )
-              .slice(0, 3)
-              .map((article) => (
-                <NewsCard key={article.id} article={article} variant="compact" />
-              ))}
-          </div>
-        </section>
-      )}
-
-      {/* Latest News */}
-      <section className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
-        <div className="flex items-center space-x-2 mb-4">
-          <Clock className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-bold">Últimas Notícias</h2>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {regularNews.map((article) => (
-            <NewsCard key={article.id} article={article} />
-          ))}
-        </div>
-      </section>
-
-      {/* Load More */}
-      <div className="flex justify-center pt-8">
-        <Button variant="outline" className="hover-lift">
-          Carregar Mais Notícias
-        </Button>
       </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center space-x-2">
+            <Filter className="h-5 w-5" />
+            <span>Filtros</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar notícias..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <Select value={selectedSport} onValueChange={setSelectedSport}>
+              <SelectTrigger>
+                <SelectValue placeholder="Esporte" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os esportes</SelectItem>
+                <SelectItem value="soccer">Futebol</SelectItem>
+                <SelectItem value="basketball">Basquete</SelectItem>
+                <SelectItem value="volleyball">Vôlei</SelectItem>
+                <SelectItem value="tennis">Tênis</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as categorias</SelectItem>
+                <SelectItem value="transfers">Transferências</SelectItem>
+                <SelectItem value="results">Resultados</SelectItem>
+                <SelectItem value="interviews">Entrevistas</SelectItem>
+                <SelectItem value="rumors">Rumores</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedSport('all');
+                setSelectedCategory('all');
+              }}
+            >
+              Limpar Filtros
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* News Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="trending" className="flex items-center space-x-2">
+            <TrendingUp className="h-4 w-4" />
+            <span>Em Alta</span>
+          </TabsTrigger>
+          <TabsTrigger value="recent" className="flex items-center space-x-2">
+            <Clock className="h-4 w-4" />
+            <span>Recentes</span>
+          </TabsTrigger>
+          <TabsTrigger value="bookmarked" className="flex items-center space-x-2">
+            <Bookmark className="h-4 w-4" />
+            <span>Favoritos ({bookmarkedNews.length})</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="trending" className="space-y-6">
+          {getTrendingNews().length > 0 ? (
+            getTrendingNews().map(article => (
+              <NewsCard key={article.id} article={article} />
+            ))
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <TrendingUp className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Nenhuma notícia em alta</h3>
+                <p className="text-muted-foreground text-center">
+                  Não há notícias populares com os filtros selecionados.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="recent" className="space-y-6">
+          {getRecentNews().length > 0 ? (
+            getRecentNews().map(article => (
+              <NewsCard key={article.id} article={article} />
+            ))
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Clock className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Nenhuma notícia encontrada</h3>
+                <p className="text-muted-foreground text-center">
+                  Não há notícias recentes com os filtros selecionados.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="bookmarked" className="space-y-6">
+          {getBookmarkedNews().length > 0 ? (
+            getBookmarkedNews().map(article => (
+              <NewsCard key={article.id} article={article} />
+            ))
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Bookmark className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Nenhuma notícia salva</h3>
+                <p className="text-muted-foreground text-center">
+                  Você ainda não salvou nenhuma notícia nos seus favoritos.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

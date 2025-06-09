@@ -1,262 +1,320 @@
 
 import React, { useState } from 'react';
-import { User, Settings, Heart, Bell, Trophy, Calendar, Star, Edit } from 'lucide-react';
-import { useUserStore } from '../../store/userStore';
+import { User, Settings, Bell, Shield, Camera, Edit3, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { SportType } from '../../types/sports';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useUserStore } from '../../store/userStore';
 import ProfileEditor from './ProfileEditor';
+import { useToast } from '@/hooks/use-toast';
 
 const ProfileScreen = () => {
-  const { profile, isAuthenticated, setNotificationPreferences } = useUserStore();
-  const [showEditor, setShowEditor] = useState(false);
+  const { toast } = useToast();
+  const { profile, updateProfile } = useUserStore();
+  const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState('profile');
 
-  const sports: { id: SportType; name: string; color: string; icon: string }[] = [
-    { id: 'soccer', name: 'Futebol', color: 'bg-sports-soccer', icon: '⚽' },
-    { id: 'basketball', name: 'Basquete', color: 'bg-sports-basketball', icon: '🏀' },
-    { id: 'volleyball', name: 'Vôlei', color: 'bg-sports-volleyball', icon: '🏐' },
-    { id: 'tennis', name: 'Tênis', color: 'bg-sports-tennis', icon: '🎾' },
-    { id: 'football', name: 'Futebol Americano', color: 'bg-sports-football', icon: '🏈' },
-  ];
-
-  const handleNotificationToggle = (key: keyof typeof profile.notifications, value: boolean) => {
-    if (!profile) return;
-    
-    setNotificationPreferences({
-      ...profile.notifications,
-      [key]: value
+  const handleSaveProfile = (updatedProfile: any) => {
+    updateProfile(updatedProfile);
+    setIsEditing(false);
+    toast({
+      title: "Perfil atualizado!",
+      description: "Suas informações foram salvas com sucesso.",
     });
   };
 
-  if (!isAuthenticated || !profile) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4">
-          <div className="h-20 w-20 bg-muted rounded-full flex items-center justify-center mx-auto">
-            <User className="h-10 w-10 text-muted-foreground" />
-          </div>
-          <h2 className="text-xl font-bold">Entre para ver seu perfil</h2>
-          <p className="text-muted-foreground">
-            Acesse sua conta para personalizar suas preferências esportivas
-          </p>
-          <Button className="bg-gradient-to-r from-primary to-purple-600">
-            Fazer Login
-          </Button>
+  const NotificationSettings = () => (
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Notificações Push</h3>
+        <div className="space-y-3">
+          {[
+            { id: 'liveGames', label: 'Jogos ao vivo dos seus times', enabled: true },
+            { id: 'gameResults', label: 'Resultados dos jogos', enabled: true },
+            { id: 'news', label: 'Notícias dos seus esportes favoritos', enabled: false },
+            { id: 'transfers', label: 'Transferências e contratações', enabled: true },
+          ].map((setting) => (
+            <div key={setting.id} className="flex items-center justify-between p-3 border rounded-lg">
+              <span className="font-medium">{setting.label}</span>
+              <Badge variant={setting.enabled ? "default" : "secondary"}>
+                {setting.enabled ? "Ativado" : "Desativado"}
+              </Badge>
+            </div>
+          ))}
         </div>
+      </div>
+    </div>
+  );
+
+  const PrivacySettings = () => (
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Configurações de Privacidade</h3>
+        <div className="space-y-3">
+          {[
+            { id: 'profilePublic', label: 'Perfil público', enabled: false },
+            { id: 'shareActivity', label: 'Compartilhar atividade', enabled: true },
+            { id: 'allowMessages', label: 'Permitir mensagens', enabled: false },
+            { id: 'showOnline', label: 'Mostrar quando online', enabled: true },
+          ].map((setting) => (
+            <div key={setting.id} className="flex items-center justify-between p-3 border rounded-lg">
+              <span className="font-medium">{setting.label}</span>
+              <Badge variant={setting.enabled ? "default" : "secondary"}>
+                {setting.enabled ? "Ativado" : "Desativado"}
+              </Badge>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const AccountSettings = () => (
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Conta</h3>
+        <div className="space-y-3">
+          <div className="p-4 border rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Email</p>
+                <p className="text-sm text-muted-foreground">{profile?.email}</p>
+              </div>
+              <Button variant="outline" size="sm">Alterar</Button>
+            </div>
+          </div>
+          
+          <div className="p-4 border rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Senha</p>
+                <p className="text-sm text-muted-foreground">••••••••</p>
+              </div>
+              <Button variant="outline" size="sm">Alterar</Button>
+            </div>
+          </div>
+          
+          <div className="p-4 border rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Autenticação de dois fatores</p>
+                <p className="text-sm text-muted-foreground">Adicione uma camada extra de segurança</p>
+              </div>
+              <Button variant="outline" size="sm">Configurar</Button>
+            </div>
+          </div>
+        </div>
+        
+        <div className="pt-6 border-t">
+          <h4 className="text-md font-semibold text-destructive mb-3">Zona de Perigo</h4>
+          <div className="space-y-3">
+            <Button variant="destructive" className="w-full">
+              Desativar Conta
+            </Button>
+            <Button variant="outline" className="w-full border-destructive text-destructive">
+              Excluir Conta Permanentemente
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <p className="text-muted-foreground">Carregando perfil...</p>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="space-y-6 pb-20 md:pb-8">
-        {/* Profile Header */}
-        <Card className="animate-fade-in">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                {profile.avatar ? (
-                  <img
-                    src={profile.avatar}
-                    alt="Profile"
-                    className="h-20 w-20 rounded-full object-cover border-4 border-primary/20"
-                  />
-                ) : (
-                  <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
-                    <User className="h-10 w-10 text-white" />
-                  </div>
-                )}
-                <Button
-                  size="icon"
-                  variant="secondary"
-                  className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full"
-                  onClick={() => setShowEditor(true)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="flex-1">
-                <h1 className="text-2xl font-bold">{profile.name}</h1>
-                <p className="text-muted-foreground">{profile.email}</p>
-                <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
-                  <span className="flex items-center space-x-1">
-                    <Heart className="h-4 w-4" />
-                    <span>{profile.favoriteTeams.length} times</span>
-                  </span>
-                  <span className="flex items-center space-x-1">
-                    <Trophy className="h-4 w-4" />
-                    <span>{profile.favoriteSports.length} esportes</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Favorite Sports */}
-        <Card className="animate-slide-up">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Trophy className="h-5 w-5 text-primary" />
-              <span>Esportes Favoritos</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {sports.map((sport) => {
-                const isSelected = profile.favoriteSports.includes(sport.id);
-                return (
-                  <div
-                    key={sport.id}
-                    className={`p-4 rounded-lg border-2 transition-all duration-200 ${
-                      isSelected
-                        ? 'border-primary bg-primary/10'
-                        : 'border-muted opacity-50'
-                    }`}
-                  >
-                    <div className="text-center space-y-2">
-                      <div className="text-2xl">{sport.icon}</div>
-                      <div className="text-sm font-medium">{sport.name}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Favorite Teams */}
-        <Card className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Star className="h-5 w-5 text-primary" />
-                <span>Times Favoritos</span>
-              </div>
-              <Button variant="outline" size="sm" onClick={() => setShowEditor(true)}>
-                <span className="mr-2">+</span>
-                Adicionar
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {profile.favoriteTeams.length > 0 ? (
-              <div className="grid gap-3">
-                {profile.favoriteTeams.map((team) => (
-                  <div
-                    key={team.id}
-                    className="flex items-center space-x-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                  >
-                    <img
-                      src={team.logo}
-                      alt={team.name}
-                      className="h-10 w-10 object-contain"
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-medium">{team.name}</h4>
-                      <p className="text-sm text-muted-foreground">{team.league}</p>
-                    </div>
-                    <Badge variant="secondary">{team.sport}</Badge>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Star className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Nenhum time favorito ainda</p>
-                <p className="text-sm">Adicione times para receber recomendações personalizadas</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Notifications */}
-        <Card className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Bell className="h-5 w-5 text-primary" />
-              <span>Notificações</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium">Lembretes de Jogos</h4>
-                <p className="text-sm text-muted-foreground">
-                  Receba notificações antes dos jogos começarem
-                </p>
-              </div>
-              <Switch
-                checked={profile.notifications.gameReminders}
-                onCheckedChange={(checked) => handleNotificationToggle('gameReminders', checked)}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium">Atualizações de Notícias</h4>
-                <p className="text-sm text-muted-foreground">
-                  Fique por dentro das últimas notícias dos seus times
-                </p>
-              </div>
-              <Switch
-                checked={profile.notifications.newsUpdates}
-                onCheckedChange={(checked) => handleNotificationToggle('newsUpdates', checked)}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium">Placares ao Vivo</h4>
-                <p className="text-sm text-muted-foreground">
-                  Receba atualizações de placares em tempo real
-                </p>
-              </div>
-              <Switch
-                checked={profile.notifications.scoreUpdates}
-                onCheckedChange={(checked) => handleNotificationToggle('scoreUpdates', checked)}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Account Settings */}
-        <Card className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Settings className="h-5 w-5 text-primary" />
-              <span>Configurações da Conta</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button variant="outline" className="w-full justify-start" onClick={() => setShowEditor(true)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Editar Perfil
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <Bell className="h-4 w-4 mr-2" />
-              Preferências de Notificação
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <Calendar className="h-4 w-4 mr-2" />
-              Sincronizar Calendário
-            </Button>
-            <Button variant="outline" className="w-full justify-start text-destructive">
-              <User className="h-4 w-4 mr-2" />
-              Sair da Conta
-            </Button>
-          </CardContent>
-        </Card>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center space-x-2">
+            <User className="h-8 w-8 text-primary" />
+            <span>Meu Perfil</span>
+          </h1>
+          <p className="text-muted-foreground">
+            Gerencie suas informações pessoais e preferências
+          </p>
+        </div>
       </div>
 
-      {/* Profile Editor Modal */}
-      {showEditor && (
-        <ProfileEditor onClose={() => setShowEditor(false)} />
+      {/* Profile Overview Card */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
+            <div className="relative">
+              <img
+                src={profile.avatar}
+                alt="Avatar"
+                className="h-24 w-24 rounded-full object-cover border-4 border-primary/20"
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="flex-1">
+              <div className="flex items-center space-x-3 mb-2">
+                <h2 className="text-2xl font-bold">{profile.name}</h2>
+                <Badge variant="secondary">Membro desde 2024</Badge>
+              </div>
+              <p className="text-muted-foreground mb-4">{profile.email}</p>
+              
+              <div className="flex flex-wrap gap-2 mb-4">
+                {profile.favoriteSports.map((sport) => (
+                  <Badge key={sport} variant="outline" className="text-xs">
+                    {sport === 'soccer' ? 'Futebol' : 
+                     sport === 'basketball' ? 'Basquete' : 
+                     sport === 'volleyball' ? 'Vôlei' : 
+                     sport === 'tennis' ? 'Tênis' : sport}
+                  </Badge>
+                ))}
+              </div>
+              
+              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                <span>{profile.favoriteTeams.length} times favoritos</span>
+                <span>•</span>
+                <span>Localização: {profile.location || 'Não informado'}</span>
+              </div>
+            </div>
+            
+            <Button 
+              onClick={() => setIsEditing(!isEditing)}
+              variant={isEditing ? "secondary" : "default"}
+            >
+              {isEditing ? (
+                <>
+                  <X className="h-4 w-4 mr-2" />
+                  Cancelar
+                </>
+              ) : (
+                <>
+                  <Edit3 className="h-4 w-4 mr-2" />
+                  Editar Perfil
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Edit Mode or Tabs */}
+      {isEditing ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Editar Perfil</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ProfileEditor 
+              profile={profile} 
+              onSave={handleSaveProfile}
+              onCancel={() => setIsEditing(false)}
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="profile" className="flex items-center space-x-2">
+              <User className="h-4 w-4" />
+              <span>Perfil</span>
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center space-x-2">
+              <Bell className="h-4 w-4" />
+              <span>Notificações</span>
+            </TabsTrigger>
+            <TabsTrigger value="privacy" className="flex items-center space-x-2">
+              <Shield className="h-4 w-4" />
+              <span>Privacidade</span>
+            </TabsTrigger>
+            <TabsTrigger value="account" className="flex items-center space-x-2">
+              <Settings className="h-4 w-4" />
+              <span>Conta</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile">
+            <Card>
+              <CardHeader>
+                <CardTitle>Informações do Perfil</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-semibold mb-3">Esportes Favoritos</h4>
+                    <div className="space-y-2">
+                      {profile.favoriteSports.map((sport) => (
+                        <div key={sport} className="flex items-center justify-between p-2 border rounded">
+                          <span>{sport === 'soccer' ? 'Futebol' : 
+                                sport === 'basketball' ? 'Basquete' : 
+                                sport === 'volleyball' ? 'Vôlei' : 
+                                sport === 'tennis' ? 'Tênis' : sport}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold mb-3">Times Favoritos</h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {profile.favoriteTeams.map((team) => (
+                        <div key={team.id} className="flex items-center space-x-3 p-2 border rounded">
+                          <img src={team.logo} alt={team.name} className="h-6 w-6 object-contain" />
+                          <span className="text-sm">{team.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações de Notificação</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <NotificationSettings />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="privacy">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações de Privacidade</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PrivacySettings />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="account">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações da Conta</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AccountSettings />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       )}
-    </>
+    </div>
   );
 };
 

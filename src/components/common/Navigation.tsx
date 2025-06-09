@@ -4,11 +4,7 @@ import { Home, Calendar, Newspaper, User } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 
-interface NavigationProps {
-  // A navegação agora é controlada pelas rotas, não mais por estado local.
-}
-
-const Navigation = (props: NavigationProps) => {
+const Navigation = () => {
   const navItems = [
     { id: 'home', to: '/', label: 'Início', icon: Home },
     { id: 'games', to: '/games', label: 'Jogos', icon: Calendar },
