@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { Game, Team, NewsArticle, SportType } from '../types/sports';
 
@@ -6,7 +5,7 @@ interface SportsDataState {
   // Real-time data
   liveGames: Game[];
   upcomingGames: Game[];
-  finishedGames: Game[];
+  completedGames: Game[];
   news: NewsArticle[];
   teams: Team[];
   
@@ -23,6 +22,7 @@ interface SportsDataState {
   // Actions
   fetchLiveGames: () => Promise<void>;
   fetchUpcomingGames: (sport?: SportType) => Promise<void>;
+  fetchCompletedGames: (sport?: SportType) => Promise<void>;
   fetchNews: (sport?: SportType) => Promise<void>;
   fetchTeams: (sport: SportType) => Promise<void>;
   searchTeams: (query: string) => Promise<Team[]>;
@@ -93,7 +93,7 @@ const MOCK_TEAMS: Record<SportType, Team[]> = {
 export const useSportsDataStore = create<SportsDataState>((set, get) => ({
   liveGames: [],
   upcomingGames: [],
-  finishedGames: [],
+  completedGames: [],
   news: [],
   teams: [],
   
@@ -210,6 +210,45 @@ export const useSportsDataStore = create<SportsDataState>((set, get) => ({
     }
   },
 
+  fetchCompletedGames: async (sport?: SportType) => {
+    set({ isLoadingGames: true, gamesError: null });
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const mockCompletedGames: Game[] = [
+        {
+          id: 'completed-1',
+          homeTeam: MOCK_TEAMS.soccer[0],
+          awayTeam: MOCK_TEAMS.soccer[1],
+          date: yesterday.toISOString().split('T')[0],
+          time: '16:00',
+          venue: 'Allianz Parque',
+          sport: 'soccer',
+          league: 'Brasileirão Série A',
+          status: 'finished',
+          homeScore: 2,
+          awayScore: 1,
+          streamingPlatforms: [],
+        }
+      ];
+      
+      const filteredGames = sport 
+        ? mockCompletedGames.filter(game => game.sport === sport)
+        : mockCompletedGames;
+      
+      set({ completedGames: filteredGames, isLoadingGames: false });
+      console.log('✅ Jogos finalizados carregados:', filteredGames.length);
+      
+    } catch (error) {
+      set({ gamesError: 'Erro ao carregar jogos finalizados', isLoadingGames: false });
+      console.error('❌ Erro ao buscar jogos finalizados:', error);
+    }
+  },
+
   fetchNews: async (sport?: SportType) => {
     set({ isLoadingNews: true, newsError: null });
     
@@ -305,6 +344,7 @@ export const useSportsDataStore = create<SportsDataState>((set, get) => ({
     await Promise.all([
       actions.fetchLiveGames(),
       actions.fetchUpcomingGames(),
+      actions.fetchCompletedGames(),
       actions.fetchNews()
     ]);
     

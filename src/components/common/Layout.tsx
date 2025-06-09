@@ -26,16 +26,14 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, isLoading = false }) =>
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header />
-      <div className="flex">
-        <Navigation />
-        <main className="flex-1 md:ml-64 p-4 md:p-6 mt-16 transition-all duration-300">
-          <div className="max-w-7xl mx-auto">
-            <div className="animate-fade-in">
-              {children}
-            </div>
+      <Navigation />
+      <main className="md:ml-64 p-4 md:p-6 mt-16 pb-20 md:pb-6 transition-all duration-300">
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-fade-in">
+            {children}
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };
