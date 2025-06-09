@@ -1,174 +1,308 @@
 
 import React, { useEffect } from 'react';
-import { TrendingUp, Calendar, Star, Zap } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useUserStore } from '../../store/userStore';
-import { useGamesStore } from '../../store/gamesStore';
-import GameCard from '../games/GameCard';
+import { Calendar, TrendingUp, Users, Trophy, Play, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useUserStore } from '../../store/userStore';
+import { useSportsDataStore } from '../../store/sportsDataStore';
+import AppLayout from '../common/Layout';
+import LoadingSpinner from '../common/LoadingSpinner';
+import { useNavigate } from 'react-router-dom';
 
 const HomeScreen = () => {
   const navigate = useNavigate();
   const { profile, isAuthenticated } = useUserStore();
-  const { games, isLoading, fetchGames, getFavoriteTeamGames, getUpcomingGames } = useGamesStore();
+  const { 
+    liveGames, 
+    upcomingGames, 
+    news, 
+    isLoadingGames, 
+    isLoadingNews,
+    fetchLiveGames,
+    fetchUpcomingGames,
+    fetchNews,
+    refreshAllData
+  } = useSportsDataStore();
 
   useEffect(() => {
-    if (games.length === 0) {
-      fetchGames();
-    }
-  }, [fetchGames, games.length]);
+    // Carregar dados iniciais
+    refreshAllData();
+  }, []);
 
-  const favoriteTeamGames = profile ? getFavoriteTeamGames(profile.favoriteTeams) : [];
-  const upcomingGames = getUpcomingGames(5);
-  const featuredGame = upcomingGames[0];
+  const personalizedSports = profile?.favoriteSports || ['soccer'];
+  const personalizedTeams = profile?.favoriteTeams || [];
 
-  const timeOfDay = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Bom dia';
-    if (hour < 18) return 'Boa tarde';
-    return 'Boa noite';
+  const getPersonalizedContent = () => {
+    if (!profile) return { games: upcomingGames, news };
+
+    const personalizedGames = upcomingGames.filter(game => 
+      personalizedSports.includes(game.sport) ||
+      personalizedTeams.some(team => 
+        team.id === game.homeTeam.id || team.id === game.awayTeam.id
+      )
+    );
+
+    const personalizedNews = news.filter(article =>
+      personalizedSports.includes(article.sport) ||
+      article.teams.some(team => 
+        personalizedTeams.some(userTeam => userTeam.id === team.id)
+      )
+    );
+
+    return { 
+      games: personalizedGames.length > 0 ? personalizedGames : upcomingGames, 
+      news: personalizedNews.length > 0 ? personalizedNews : news 
+    };
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 bg-muted rounded w-1/3"></div>
-        <div className="grid gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-32 bg-muted rounded-lg"></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const { games: personalizedGames, news: personalizedNewsData } = getPersonalizedContent();
 
   return (
-    <div className="space-y-8 pb-20 md:pb-8">
-      {/* Welcome Section */}
-      <section className="animate-fade-in">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold gradient-text">
-              {timeOfDay()}{isAuthenticated && profile ? `, ${profile.name.split(' ')[0]}` : ''}!
+    <AppLayout>
+      <div className="space-y-6">
+        {/* Welcome Section */}
+        <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-xl p-6">
+          <div className="max-w-4xl">
+            <h1 className="text-3xl font-bold mb-2">
+              {isAuthenticated ? `Bem-vindo, ${profile?.name}!` : 'Bem-vindo ao Sport Sync!'}
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground text-lg">
               {isAuthenticated 
-                ? `${upcomingGames.length} jogos hoje • ${favoriteTeamGames.length} dos seus times favoritos`
-                : 'Descubra os próximos jogos e acompanhe seus times favoritos'
+                ? 'Aqui estão suas atualizações esportivas personalizadas'
+                : 'Sua central de informações esportivas em tempo real'
               }
             </p>
-          </div>
-          <div className="hidden md:flex space-x-2">
-            <Button variant="outline" size="sm" onClick={() => navigate('/')}>
-              <Calendar className="h-4 w-4 mr-2" />
-              Agenda
-            </Button>
-            <Button size="sm" className="bg-gradient-to-r from-primary to-purple-600">
-              <Star className="h-4 w-4 mr-2" />
-              Favoritos
-            </Button>
+            {!isAuthenticated && (
+              <Button className="mt-4" onClick={() => navigate('/login')}>
+                Fazer Login para Personalizar
+              </Button>
+            )}
           </div>
         </div>
-      </section>
 
-      {/* Featured Game */}
-      {featuredGame && (
-        <section className="animate-slide-up">
-          <div className="flex items-center space-x-2 mb-4">
-            <Zap className="h-5 w-5 text-primary animate-pulse" />
-            <h2 className="text-xl font-bold">Jogo em Destaque</h2>
-          </div>
-          <GameCard game={featuredGame} variant="featured" />
-        </section>
-      )}
+        {/* Live Games */}
+        {liveGames.length > 0 && (
+          <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2">
+                  <div className="h-3 w-3 bg-red-500 rounded-full animate-pulse"></div>
+                  <Play className="h-5 w-5 text-primary" />
+                  <span>Jogos ao Vivo</span>
+                </div>
+                <Badge variant="secondary" className="bg-red-100 text-red-800">
+                  {liveGames.length} jogos
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                {liveGames.map((game) => (
+                  <div
+                    key={game.id}
+                    className="flex items-center justify-between p-4 bg-background/50 rounded-lg border hover:bg-background/80 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/game/${game.id}`)}
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-2">
+                        <img
+                          src={game.homeTeam.logo}
+                          alt={game.homeTeam.name}
+                          className="h-8 w-8 object-contain"
+                        />
+                        <span className="font-medium">{game.homeTeam.name}</span>
+                      </div>
+                      <span className="text-muted-foreground">vs</span>
+                      <div className="flex items-center space-x-2">
+                        <img
+                          src={game.awayTeam.logo}
+                          alt={game.awayTeam.name}
+                          className="h-8 w-8 object-contain"
+                        />
+                        <span className="font-medium">{game.awayTeam.name}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Badge variant="outline">{game.league}</Badge>
+                      <Button size="sm" variant="ghost">
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Favorite Teams Games */}
-      {isAuthenticated && favoriteTeamGames.length > 0 && (
-        <section className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold flex items-center space-x-2">
-              <Star className="h-5 w-5 text-primary" />
-              <span>Seus Times</span>
-            </h2>
-            <Button variant="ghost" size="sm">
-              Ver todos
-            </Button>
-          </div>
-          <div className="grid gap-4">
-            {favoriteTeamGames.slice(0, 3).map((game) => (
-              <GameCard key={game.id} game={game} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Upcoming Games */}
-      <section className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold flex items-center space-x-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            <span>Próximos Jogos</span>
-          </h2>
-          <Button variant="ghost" size="sm">
-            Ver agenda completa
-          </Button>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          {upcomingGames.slice(1, 5).map((game) => (
-            <GameCard key={game.id} game={game} />
-          ))}
-        </div>
-      </section>
-
-      {/* Quick Actions */}
-      <section className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
+        {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Button 
-            variant="outline" 
-            className="h-20 flex-col space-y-2 hover-lift"
-            onClick={() => navigate('/')}
-          >
-            <Calendar className="h-6 w-6" />
-            <span className="text-sm">Ver Agenda</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            className="h-20 flex-col space-y-2 hover-lift"
-          >
-            <Star className="h-6 w-6" />
-            <span className="text-sm">Favoritos</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            className="h-20 flex-col space-y-2 hover-lift"
-            onClick={() => navigate('/sport/all')}
-          >
-            <TrendingUp className="h-6 w-6" />
-            <span className="text-sm">Estatísticas</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            className="h-20 flex-col space-y-2 hover-lift"
-          >
-            <Zap className="h-6 w-6" />
-            <span className="text-sm">Ao Vivo</span>
-          </Button>
+          <Card className="text-center">
+            <CardContent className="p-4">
+              <Calendar className="h-8 w-8 text-primary mx-auto mb-2" />
+              <div className="text-2xl font-bold">{personalizedGames.length}</div>
+              <div className="text-sm text-muted-foreground">Próximos Jogos</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="text-center">
+            <CardContent className="p-4">
+              <TrendingUp className="h-8 w-8 text-green-500 mx-auto mb-2" />
+              <div className="text-2xl font-bold">{liveGames.length}</div>
+              <div className="text-sm text-muted-foreground">Ao Vivo</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="text-center">
+            <CardContent className="p-4">
+              <Users className="h-8 w-8 text-blue-500 mx-auto mb-2" />
+              <div className="text-2xl font-bold">{profile?.favoriteTeams.length || 0}</div>
+              <div className="text-sm text-muted-foreground">Times Favoritos</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="text-center">
+            <CardContent className="p-4">
+              <Trophy className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+              <div className="text-2xl font-bold">{personalizedNewsData.length}</div>
+              <div className="text-sm text-muted-foreground">Notícias</div>
+            </CardContent>
+          </Card>
         </div>
-      </section>
 
-      {/* Call to Action for Unauthenticated Users */}
-      {!isAuthenticated && (
-        <section className="animate-slide-up bg-gradient-to-r from-primary/10 to-purple-600/10 rounded-xl p-6 text-center">
-          <h3 className="text-xl font-bold mb-2">Personalize sua Experiência</h3>
-          <p className="text-muted-foreground mb-4">
-            Entre e configure seus times favoritos para receber recomendações personalizadas
-          </p>
-          <Button className="bg-gradient-to-r from-primary to-purple-600">
-            Criar Conta Grátis
-          </Button>
-        </section>
-      )}
-    </div>
+        {/* Upcoming Games */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                <span>Próximos Jogos</span>
+                {isAuthenticated && (
+                  <Badge variant="secondary">Personalizados</Badge>
+                )}
+              </div>
+              <Button variant="outline" size="sm" onClick={() => navigate('/games')}>
+                Ver Todos
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoadingGames ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner text="Carregando jogos..." />
+              </div>
+            ) : personalizedGames.length > 0 ? (
+              <div className="grid gap-4">
+                {personalizedGames.slice(0, 3).map((game) => (
+                  <div
+                    key={game.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/game/${game.id}`)}
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="text-center">
+                        <div className="text-sm font-medium">{game.date}</div>
+                        <div className="text-sm text-muted-foreground">{game.time}</div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-2">
+                          <img
+                            src={game.homeTeam.logo}
+                            alt={game.homeTeam.name}
+                            className="h-6 w-6 object-contain"
+                          />
+                          <span className="font-medium text-sm">{game.homeTeam.name}</span>
+                        </div>
+                        <span className="text-muted-foreground text-sm">vs</span>
+                        <div className="flex items-center space-x-2">
+                          <img
+                            src={game.awayTeam.logo}
+                            alt={game.awayTeam.name}
+                            className="h-6 w-6 object-contain"
+                          />
+                          <span className="font-medium text-sm">{game.awayTeam.name}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="outline" className="text-xs">{game.league}</Badge>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Nenhum jogo próximo encontrado</p>
+                {!isAuthenticated && (
+                  <p className="text-sm">Faça login para ver jogos personalizados</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Latest News */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                <span>Últimas Notícias</span>
+                {isAuthenticated && (
+                  <Badge variant="secondary">Personalizadas</Badge>
+                )}
+              </div>
+              <Button variant="outline" size="sm" onClick={() => navigate('/news')}>
+                Ver Todas
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoadingNews ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner text="Carregando notícias..." />
+              </div>
+            ) : personalizedNewsData.length > 0 ? (
+              <div className="grid gap-4">
+                {personalizedNewsData.slice(0, 3).map((article) => (
+                  <div
+                    key={article.id}
+                    className="flex space-x-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                  >
+                    <img
+                      src={article.imageUrl}
+                      alt={article.title}
+                      className="h-16 w-16 object-cover rounded-lg flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium line-clamp-2 mb-1">{article.title}</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                        {article.summary}
+                      </p>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="outline" className="text-xs">{article.sport}</Badge>
+                        <span className="text-xs text-muted-foreground">{article.source}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Nenhuma notícia encontrada</p>
+                {!isAuthenticated && (
+                  <p className="text-sm">Faça login para ver notícias personalizadas</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
   );
 };
 

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Home, Calendar, Newspaper, User } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
@@ -5,15 +6,14 @@ import { cn } from '../../lib/utils';
 
 interface NavigationProps {
   // A navegação agora é controlada pelas rotas, não mais por estado local.
-  // Propriedades antigas removidas.
 }
 
 const Navigation = (props: NavigationProps) => {
   const navItems = [
-    { to: '/', label: 'Início', icon: Home },
-    { to: '/games', label: 'Jogos', icon: Calendar },
-    { to: '/news', label: 'Notícias', icon: Newspaper },
-    { to: '/profile', label: 'Perfil', icon: User },
+    { id: 'home', to: '/', label: 'Início', icon: Home },
+    { id: 'games', to: '/games', label: 'Jogos', icon: Calendar },
+    { id: 'news', to: '/news', label: 'Notícias', icon: Newspaper },
+    { id: 'profile', to: '/profile', label: 'Perfil', icon: User },
   ];
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
